@@ -1,0 +1,31 @@
+# {{ ansible_managed }}
+# NOC kiosk dashboard. Bound to loopback only: the browser that renders it
+# runs on this same host, so there is no reason to expose it on the network.
+server {
+    listen {{ nginx_listen_address }}:{{ nginx_listen_port }} default_server;
+    listen [::1]:{{ nginx_listen_port }} default_server;
+
+    server_name localhost;
+    root {{ nginx_webroot }};
+    index index.html;
+
+    access_log /var/log/nginx/kiosk-access.log;
+    error_log  /var/log/nginx/kiosk-error.log;
+
+    # The dashboard must never be served stale after an edit.
+    location = /index.html {
+        add_header Cache-Control "no-store, no-cache, must-revalidate";
+        expires -1;
+    }
+
+    # Data files dropped by future collector scripts.
+    location /data/ {
+        add_header Cache-Control "no-store";
+        expires -1;
+        autoindex off;
+    }
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+}

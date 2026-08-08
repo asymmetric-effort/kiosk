@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>NOC Display</title>
+<!-- Declaring a dark color-scheme stops Chrome's WebContentsForceDark from
+     re-processing a page that is already dark and mangling it. -->
+<meta name="color-scheme" content="dark">
+<style>
+  :root {
+    --bg:      #0b0e13;
+    --panel:   #141922;
+    --edge:    #232b38;
+    --text:    #e6edf3;
+    --muted:   #8b98a9;
+    --accent:  #4aa3ff;
+    --ok:      #3fb950;
+    --alert:   #c1121f;
+    --info:    #0b3d91;
+    --notice:  #ffd400;
+    --banner-h: 64px;
+    --footer-h: 52px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;              /* a kiosk never scrolls */
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.4 system-ui, "DejaVu Sans", sans-serif;
+    cursor: none;                  /* display-only unit */
+  }
+
+  /* Three horizontal layers: banner / content / footer. */
+  .shell {
+    display: grid;
+    grid-template-rows: var(--banner-h) 1fr var(--footer-h);
+    height: 100vh;
+  }
+
+  /* ---- top banner: red alert bar with scrolling notice ---- */
+  .banner {
+    display: flex;
+    align-items: center;
+    overflow: hidden;              /* clip the track as it travels */
+    background: var(--alert);
+    border-bottom: 1px solid #7a0b14;
+    color: #ffffff;
+  }
+  .marquee {
+    display: inline-block;
+    white-space: nowrap;
+    padding-left: 100%;            /* start fully off the right edge */
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: .4px;
+    text-shadow: 0 1px 2px rgba(0,0,0,.35);
+    animation: marquee 18s linear infinite;
+  }
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-100%); }
+  }
+  /* Respect reduced-motion; the text still reads, it just stops travelling. */
+  @media (prefers-reduced-motion: reduce) {
+    .marquee { animation: none; padding-left: 18px; }
+  }
+
+  .clock { font-variant-numeric: tabular-nums; color: var(--text); }
+  .clock .date { color: var(--muted); }
+
+  /* ---- content ---- */
+  .content {
+    position: relative;
+    min-height: 0;                 /* lets the iframe shrink inside the grid */
+    background: var(--bg);
+  }
+  .content iframe {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+
+  /* ---- bottom footer: blue bar with yellow notice ---- */
+  .footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 18px;
+    background: var(--info);
+    border-top: 1px solid #072a63;
+    color: var(--notice);
+    font-size: 20px;
+    font-weight: 650;
+    letter-spacing: .3px;
+    text-shadow: 0 1px 2px rgba(0,0,0,.35);
+  }
+  .wx-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 34px;
+    white-space: nowrap;
+  }
+  .wx-city { font-weight: 500; opacity: .85; }
+  .wx-temp { font-variant-numeric: tabular-nums; font-weight: 750; }
+  .wx-stale { opacity: .5; }          /* last good value, fetch now failing */
+  .wx-loading { opacity: .7; font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <header class="banner">
+    <div class="marquee">Demonstration banner...nothing to see here</div>
+  </header>
+
+  <main class="content">
+    <!-- RainViewer sends x-frame-options: ALLOWALL and frame-ancestors *,
+         so it is safe to embed directly rather than proxy it. -->
+    <iframe id="radar"
+            title="RainViewer radar"
+            referrerpolicy="no-referrer"
+            src="https://www.rainviewer.com/map.html?loc=39,-98,4&oFa=0&oC=0&oU=0&oW=0&oCl=1&oF=0&oT=0&layer=radar&sm=1&sn=1&hu=0&oAP=1"></iframe>
+  </main>
+
+  <footer class="footer">
+    <div class="wx-row" id="wx">
+      <span class="wx-loading">Loading current conditions&hellip;</span>
+    </div>
+  </footer>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var REFRESH_MS = 10 * 60 * 1000;   // reload the radar every 10 minutes
+  var WX_MS     = 10 * 60 * 1000;    // re-poll temperatures every 10 minutes
+  var original  = document.getElementById("radar").src;
+
+  // A long-lived iframe goes stale silently; force it to reload on a timer.
+  function refreshRadar() {
+    var f = document.getElementById("radar");
+    f.src = "about:blank";
+    setTimeout(function () { f.src = original; }, 250);
+  }
+
+  // ---- current conditions -------------------------------------------------
+  // Open-Meteo: no API key, and it sends access-control-allow-origin: *, so it
+  // can be called straight from the page. Order here defines display order.
+  var CITIES = [
+    { name: "Sonora",    lat: 30.5677, lon: -100.6432 },   // Sonora, TX
+    { name: "Las Vegas", lat: 36.1699, lon: -115.1398 },
+    { name: "Dallas",    lat: 32.7767, lon:  -96.7970 },
+    { name: "Raleigh",   lat: 35.7796, lon:  -78.6382 }
+  ];
+
+  var WX_URL = "https://api.open-meteo.com/v1/forecast"
+    + "?latitude="  + CITIES.map(function (c) { return c.lat; }).join(",")
+    + "&longitude=" + CITIES.map(function (c) { return c.lon; }).join(",")
+    + "&current=temperature_2m&temperature_unit=fahrenheit&timezone=auto";
+
+  var lastGood = null;
+
+  function render(temps, stale) {
+    var row = document.getElementById("wx");
+    row.className = "wx-row" + (stale ? " wx-stale" : "");
+    row.innerHTML = "";
+    CITIES.forEach(function (c, i) {
+      var t = temps[i];
+      var el = document.createElement("span");
+      el.innerHTML = '<span class="wx-city">' + c.name + '</span> '
+                   + '<span class="wx-temp">'
+                   + (t === null || t === undefined ? "--" : Math.round(t) + "\u00b0")
+                   + '</span>';
+      row.appendChild(el);
+    });
+  }
+
+  function loadWeather() {
+    fetch(WX_URL, { cache: "no-store" })
+      .then(function (r) {
+        if (!r.ok) { throw new Error("HTTP " + r.status); }
+        return r.json();
+      })
+      .then(function (data) {
+        // A multi-location query returns an array; a single one returns an object.
+        var list = Array.isArray(data) ? data : [data];
+        var temps = list.map(function (e) {
+          return e && e.current ? e.current.temperature_2m : null;
+        });
+        lastGood = temps;
+        render(temps, false);
+      })
+      .catch(function () {
+        // Keep the last known values on screen rather than blanking the bar;
+        // dim them so nobody reads stale numbers as current.
+        render(lastGood || CITIES.map(function () { return null; }), true);
+      });
+  }
+
+  setInterval(refreshRadar, REFRESH_MS);
+  setInterval(loadWeather, WX_MS);
+  loadWeather();
+})();
+</script>
+</body>
+</html>

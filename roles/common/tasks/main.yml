@@ -1,0 +1,59 @@
+---
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Upgrade all packages
+  ansible.builtin.apt:
+    upgrade: dist
+    autoremove: true
+
+- name: Install base packages
+  ansible.builtin.apt:
+    name: "{{ common_packages }}"
+    state: present
+
+- name: Set timezone
+  community.general.timezone:
+    name: "{{ common_timezone }}"
+
+- name: Set locale
+  community.general.locale_gen:
+    name: "{{ common_locale }}"
+    state: present
+
+- name: Add Google Chrome apt key
+  ansible.builtin.get_url:
+    url: https://dl.google.com/linux/linux_signing_key.pub
+    dest: /usr/share/keyrings/google-chrome.gpg
+    mode: "0644"
+
+- name: Add Google Chrome apt repository
+  ansible.builtin.deb822_repository:
+    name: google-chrome
+    uris: https://dl.google.com/linux/chrome/deb/
+    suites: stable
+    components: main
+    signed_by: /usr/share/keyrings/google-chrome.gpg
+    architectures: amd64
+    state: present
+
+- name: Configure unattended-upgrades for security only
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/50unattended-upgrades-kiosk
+    content: |
+      Unattended-Upgrade::Allowed-Origins {
+          "${distro_id}:${distro_codename}-security";
+      };
+      Unattended-Upgrade::AutoFixInterruptedDpkg "true";
+      Unattended-Upgrade::Remove-Unused-Dependencies "true";
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Enable unattended-upgrades service
+  ansible.builtin.service:
+    name: unattended-upgrades
+    state: started
+    enabled: true

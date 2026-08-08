@@ -1,0 +1,12 @@
+# {{ ansible_managed }}
+Section "ServerFlags"
+    # No VT switching: ctrl-alt-F<n> cannot escape to a console.
+    Option "DontVTSwitch"  "true"
+    # No ctrl-alt-backspace server kill.
+    Option "DontZap"       "true"
+    # Never blank the NOC display.
+    Option "BlankTime"     "0"
+    Option "StandbyTime"   "0"
+    Option "SuspendTime"   "0"
+    Option "OffTime"       "0"
+EndSection

@@ -1,0 +1,77 @@
+---
+- name: Download Cloudflare GPG key
+  ansible.builtin.get_url:
+    url: https://pkg.cloudflarewarp.com/pubkey.gpg
+    dest: /tmp/cloudflare-warp-pubkey.gpg
+    mode: "0644"
+
+- name: Dearmor Cloudflare GPG key
+  ansible.builtin.command:
+    cmd: gpg --dearmor -o /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg /tmp/cloudflare-warp-pubkey.gpg
+    creates: /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg
+
+- name: Add Cloudflare WARP apt repository
+  ansible.builtin.deb822_repository:
+    name: cloudflare-warp
+    uris: https://pkg.cloudflarewarp.com/
+    suites: "{{ ansible_distribution_release }}"
+    components: main
+    signed_by: /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg
+    state: present
+
+- name: Install cloudflare-warp
+  ansible.builtin.apt:
+    name: cloudflare-warp
+    state: present
+    update_cache: true
+
+- name: Create WARP MDM configuration directory
+  ansible.builtin.file:
+    path: /var/lib/cloudflare-warp
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy MDM configuration for ZTNA enrollment
+  ansible.builtin.template:
+    src: mdm.xml.j2
+    dest: /var/lib/cloudflare-warp/mdm.xml
+    owner: root
+    group: root
+    mode: "0400"
+  notify: Restart warp-svc
+
+- name: Enable and start warp-svc
+  ansible.builtin.service:
+    name: warp-svc
+    state: started
+    enabled: true
+
+- name: Check WARP registration status
+  ansible.builtin.command: warp-cli registration show
+  register: cloudflare_warp_reg_status
+  changed_when: false
+  failed_when: false
+
+- name: Register WARP client
+  ansible.builtin.command: warp-cli registration new
+  when: >
+    cloudflare_warp_reg_status.rc != 0 or
+    'Missing registration' in (cloudflare_warp_reg_status.stderr | default(''))
+  changed_when: true
+
+- name: Set WARP mode
+  ansible.builtin.command: "warp-cli mode {{ cloudflare_warp_mode }}"
+  changed_when: false
+
+- name: Check WARP connection status
+  ansible.builtin.command: warp-cli status
+  register: cloudflare_warp_conn_status
+  changed_when: false
+  failed_when: false
+
+- name: Connect WARP
+  ansible.builtin.command: warp-cli connect
+  when: "'Connected' not in (cloudflare_warp_conn_status.stdout | default(''))"
+  changed_when: true

@@ -1,0 +1,24 @@
+---
+- name: CIS - Filesystem hardening
+  ansible.builtin.include_tasks: filesystem.yml
+
+- name: CIS - Disable unnecessary services
+  ansible.builtin.include_tasks: services.yml
+
+- name: CIS - Network parameter hardening
+  ansible.builtin.include_tasks: network.yml
+
+- name: CIS - Sysctl hardening
+  ansible.builtin.include_tasks: sysctl.yml
+
+- name: CIS - Firewall configuration
+  ansible.builtin.include_tasks: firewall.yml
+
+- name: CIS - Authentication and authorization
+  ansible.builtin.include_tasks: auth.yml
+
+- name: CIS - SSH server hardening
+  ansible.builtin.include_tasks: ssh.yml
+
+- name: CIS - Logging and auditing
+  ansible.builtin.include_tasks: logging.yml

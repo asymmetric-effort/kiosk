@@ -1,0 +1,11 @@
+---
+common_timezone: "UTC"
+common_locale: "en_US.UTF-8"
+common_packages:
+  - apt-transport-https
+  - ca-certificates
+  - curl
+  - gnupg
+  - lsb-release
+  - unattended-upgrades
+  - software-properties-common

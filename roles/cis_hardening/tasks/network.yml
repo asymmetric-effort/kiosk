@@ -1,0 +1,32 @@
+---
+- name: CIS 3.x - Disable wireless interfaces
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+      for iface in $(find /sys/class/net -type l -exec basename {} \;); do
+        if [ -d "/sys/class/net/${iface}/wireless" ]; then
+          ip link set "${iface}" down 2>/dev/null || true
+        fi
+      done
+    executable: /bin/bash
+  changed_when: false
+  when: cis_hardening_disable_wireless
+
+- name: CIS 3.x - Blacklist wireless kernel modules
+  ansible.builtin.copy:
+    dest: /etc/modprobe.d/cis-wireless.conf
+    content: |
+      install cfg80211 /bin/true
+      install mac80211 /bin/true
+      install wireless-regdb /bin/true
+      install iwlwifi /bin/true
+      install ath9k /bin/true
+      install ath9k_common /bin/true
+      install ath9k_hw /bin/true
+      install rtl8xxxu /bin/true
+      install b43 /bin/true
+      install brcmsmac /bin/true
+    owner: root
+    group: root
+    mode: "0644"
+  when: cis_hardening_disable_wireless

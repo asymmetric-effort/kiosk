@@ -1,0 +1,178 @@
+---
+- name: Verify kiosk deployment
+  hosts: kiosks
+  become: true
+  tasks:
+    # CIS - SSH hardening
+    - name: Verify SSH configuration
+      ansible.builtin.command: sshd -T
+      register: kiosk_verify_sshd_config
+      changed_when: false
+
+    - name: Assert root login disabled
+      ansible.builtin.assert:
+        that: "'permitrootlogin no' in kiosk_verify_sshd_config.stdout"
+        fail_msg: "Root login is not disabled in SSH"
+
+    - name: Assert password auth disabled
+      ansible.builtin.assert:
+        that: "'passwordauthentication no' in kiosk_verify_sshd_config.stdout"
+        fail_msg: "Password authentication is not disabled"
+
+    - name: Assert pubkey auth enabled
+      ansible.builtin.assert:
+        that: "'pubkeyauthentication yes' in kiosk_verify_sshd_config.stdout"
+        fail_msg: "Pubkey authentication is not enabled"
+
+    # CIS - Firewall
+    - name: Verify UFW is active
+      ansible.builtin.command: ufw status
+      register: kiosk_verify_ufw_status
+      changed_when: false
+
+    - name: Assert UFW is active
+      ansible.builtin.assert:
+        that: "'Status: active' in kiosk_verify_ufw_status.stdout"
+        fail_msg: "UFW is not active"
+
+    - name: Assert SSH is allowed through firewall
+      ansible.builtin.assert:
+        that: "'{{ cis_hardening_ssh_port | default(22) }}' in kiosk_verify_ufw_status.stdout"
+        fail_msg: "SSH port is not allowed in UFW"
+
+    # CIS - Auditd
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Assert auditd is running
+      ansible.builtin.assert:
+        that: "ansible_facts.services['auditd.service'].state == 'running'"
+        fail_msg: "auditd is not running"
+
+    # CIS - Sysctl
+    - name: Verify ASLR is enabled
+      ansible.builtin.command: sysctl kernel.randomize_va_space
+      register: kiosk_verify_aslr_status
+      changed_when: false
+
+    - name: Assert ASLR is set to 2
+      ansible.builtin.assert:
+        that: "'2' in kiosk_verify_aslr_status.stdout"
+        fail_msg: "ASLR is not fully enabled"
+
+    # Cloudflare WARP
+    - name: Assert warp-svc is running
+      ansible.builtin.assert:
+        that: "ansible_facts.services['warp-svc.service'].state == 'running'"
+        fail_msg: "warp-svc is not running"
+
+    - name: Verify WARP is connected
+      ansible.builtin.command: warp-cli status
+      register: kiosk_verify_warp_status
+      changed_when: false
+
+    - name: Assert WARP is connected
+      ansible.builtin.assert:
+        that: "'Connected' in kiosk_verify_warp_status.stdout"
+        fail_msg: "WARP is not connected"
+
+    # NGINX
+    - name: Assert nginx is running
+      ansible.builtin.assert:
+        that: "ansible_facts.services['nginx.service'].state == 'running'"
+        fail_msg: "nginx is not running"
+
+    - name: Verify dashboard is served on loopback
+      ansible.builtin.uri:
+        url: "http://127.0.0.1/"
+        return_content: true
+      register: kiosk_verify_dashboard
+
+    - name: Assert dashboard contains NOC Display
+      ansible.builtin.assert:
+        that: "'NOC Display' in kiosk_verify_dashboard.content"
+        fail_msg: "Dashboard is not serving expected content"
+
+    # Kiosk display
+    - name: Verify Xorg is installed
+      ansible.builtin.command: Xorg -version
+      register: kiosk_verify_xorg_version
+      changed_when: false
+      failed_when: false
+
+    - name: Assert Xorg is available
+      ansible.builtin.assert:
+        that: kiosk_verify_xorg_version.rc == 0 or kiosk_verify_xorg_version.rc == 1
+        fail_msg: "Xorg is not installed"
+
+    - name: Verify Xorg kiosk hardening config exists
+      ansible.builtin.stat:
+        path: /etc/X11/xorg.conf.d/10-kiosk.conf
+      register: kiosk_verify_xorg_conf
+
+    - name: Assert Xorg kiosk config is deployed
+      ansible.builtin.assert:
+        that: kiosk_verify_xorg_conf.stat.exists
+        fail_msg: "Xorg kiosk hardening config is missing"
+
+    - name: Verify VT switching is disabled in Xorg config
+      ansible.builtin.command:
+        cmd: grep -q 'DontVTSwitch' /etc/X11/xorg.conf.d/10-kiosk.conf
+      changed_when: false
+
+    - name: Verify Chrome is installed
+      ansible.builtin.command: google-chrome-stable --version
+      register: kiosk_verify_chrome_version
+      changed_when: false
+
+    - name: Assert Chrome is available
+      ansible.builtin.assert:
+        that: kiosk_verify_chrome_version.rc == 0
+        fail_msg: "Google Chrome is not installed"
+
+    - name: Verify kiosk systemd service exists
+      ansible.builtin.stat:
+        path: /etc/systemd/system/kiosk.service
+      register: kiosk_verify_service
+
+    - name: Assert kiosk service is deployed
+      ansible.builtin.assert:
+        that: kiosk_verify_service.stat.exists
+        fail_msg: "kiosk.service is missing"
+
+    - name: Assert kiosk service is running
+      ansible.builtin.assert:
+        that: "ansible_facts.services['kiosk.service'].state == 'running'"
+        fail_msg: "kiosk.service is not running"
+
+    - name: Verify kiosk session script exists
+      ansible.builtin.stat:
+        path: /usr/local/bin/kiosk-session
+      register: kiosk_verify_session_script
+
+    - name: Assert kiosk session script is present and executable
+      ansible.builtin.assert:
+        that:
+          - kiosk_verify_session_script.stat.exists
+          - kiosk_verify_session_script.stat.executable
+        fail_msg: "kiosk-session script is missing or not executable"
+
+    - name: Verify kiosk user has nologin shell
+      ansible.builtin.getent:
+        database: passwd
+        key: "{{ kiosk_user | default('kiosk') }}"
+
+    - name: Assert kiosk user shell is nologin
+      ansible.builtin.assert:
+        that: "'nologin' in getent_passwd[kiosk_user | default('kiosk')][5]"
+        fail_msg: "Kiosk user does not have nologin shell"
+
+    - name: Verify Chrome policy is deployed
+      ansible.builtin.stat:
+        path: /etc/opt/chrome/policies/managed/kiosk-policy.json
+      register: kiosk_verify_chrome_policy
+
+    - name: Assert Chrome policy exists
+      ansible.builtin.assert:
+        that: kiosk_verify_chrome_policy.stat.exists
+        fail_msg: "Chrome kiosk policy is missing"

@@ -1,0 +1,8 @@
+---
+# Cloudflare WARP / ZTNA (sensitive values should use ansible-vault)
+cloudflare_warp_organization: ""
+cloudflare_warp_gateway_id: ""
+cloudflare_warp_service_token_id: ""
+cloudflare_warp_service_token_secret: ""
+cloudflare_warp_ztna_gateway: "192.168.50.1"
+cloudflare_warp_mode: "warp+doh"

@@ -1,0 +1,11 @@
+# {{ ansible_managed }}
+# CIS Level 1 password quality requirements
+
+minlen = {{ cis_hardening_password_min_length }}
+dcredit = -1
+ucredit = -1
+ocredit = -1
+lcredit = -1
+minclass = 4
+maxrepeat = 3
+enforcing = 1

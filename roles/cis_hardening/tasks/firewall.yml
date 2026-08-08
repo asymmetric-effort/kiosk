@@ -1,0 +1,58 @@
+---
+- name: CIS 3.5.1 - Install UFW
+  ansible.builtin.apt:
+    name: ufw
+    state: present
+
+- name: CIS 3.5.2 - Set UFW default deny incoming
+  community.general.ufw:
+    direction: incoming
+    default: deny
+
+- name: CIS 3.5.2 - Set UFW default deny outgoing
+  community.general.ufw:
+    direction: outgoing
+    default: deny
+
+- name: CIS 3.5.3 - Allow SSH access (key-based non-root)
+  community.general.ufw:
+    rule: allow
+    port: "{{ cis_hardening_ssh_port | string }}"
+    proto: tcp
+    comment: "SSH access - always permitted"
+
+- name: Allow outbound DNS for WARP resolution
+  community.general.ufw:
+    rule: allow
+    direction: out
+    port: "53"
+    proto: udp
+    comment: "DNS resolution"
+
+- name: Allow outbound HTTPS for WARP registration and updates
+  community.general.ufw:
+    rule: allow
+    direction: out
+    port: "443"
+    proto: tcp
+    comment: "HTTPS for WARP and apt"
+
+- name: Allow WARP UDP tunnel port outbound
+  community.general.ufw:
+    rule: allow
+    direction: out
+    port: "2408"
+    proto: udp
+    comment: "Cloudflare WARP tunnel"
+
+- name: Allow outbound NTP for chrony
+  community.general.ufw:
+    rule: allow
+    direction: out
+    port: "123"
+    proto: udp
+    comment: "NTP time sync"
+
+- name: CIS 3.5.4 - Enable UFW
+  community.general.ufw:
+    state: enabled

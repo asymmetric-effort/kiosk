@@ -1,0 +1,4 @@
+---
+nginx_listen_address: "127.0.0.1"
+nginx_listen_port: 80
+nginx_webroot: "/var/www/kiosk"

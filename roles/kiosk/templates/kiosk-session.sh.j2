@@ -1,0 +1,51 @@
+#!/bin/sh
+# {{ ansible_managed }}
+# Kiosk X session. No window manager is started on purpose: with nothing to
+# manage windows, Chrome's single fullscreen window is all that can ever exist.
+set -eu
+
+URL="{{ kiosk_portal_url }}"
+
+# Dark mode. There is no desktop environment here to carry a theme preference,
+# so it is set at the two layers that exist: GTK for Chrome's own chrome, and
+# Chrome flags for the rendered page.
+GTK_THEME=Adwaita:dark
+export GTK_THEME
+
+# Black root window so nothing uncovered ever flashes white.
+xsetroot -solid '#000000'
+
+# A NOC display must never blank or sleep.
+xset s off
+xset s noblank
+xset -dpms
+
+# Display-only unit; park the pointer permanently out of sight.
+unclutter -idle 0 -root &
+
+# With no window manager running, nothing honours a fullscreen request --
+# Chrome must be given the panel geometry explicitly or it self-sizes small.
+MODE=$(xrandr | awk '/\*/ {print $1; exit}')
+W=${MODE%x*}
+H=${MODE#*x}
+: "${W:={{ kiosk_default_width }}}" "${H:={{ kiosk_default_height }}}"
+
+exec /usr/bin/google-chrome-stable \
+    --kiosk \
+    --ozone-platform=x11 \
+    --force-dark-mode \
+    --enable-features=WebContentsForceDark \
+    --window-position=0,0 \
+    --window-size="${W},${H}" \
+    --user-data-dir={{ kiosk_home }}/chrome \
+    --start-fullscreen \
+    --noerrdialogs \
+    --disable-infobars \
+    --no-first-run \
+    --no-default-browser-check \
+    --disable-session-crashed-bubble \
+    --disable-pinch \
+    --overscroll-history-navigation=0 \
+    --password-store=basic \
+    --check-for-update-interval=31536000 \
+    "$URL"

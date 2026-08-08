@@ -1,0 +1,53 @@
+---
+- name: CIS 1.1.2 - Mount /tmp as tmpfs with nodev,nosuid,noexec
+  ansible.posix.mount:
+    path: /tmp
+    src: tmpfs
+    fstype: tmpfs
+    opts: defaults,nodev,nosuid,noexec,size=512M
+    state: mounted
+
+- name: CIS 1.1.7 - Mount /dev/shm with nodev,nosuid,noexec
+  ansible.posix.mount:
+    path: /dev/shm
+    src: tmpfs
+    fstype: tmpfs
+    opts: defaults,nodev,nosuid,noexec
+    state: mounted
+
+- name: CIS 1.1.23 - Disable unused filesystems
+  ansible.builtin.copy:
+    dest: /etc/modprobe.d/cis-filesystem.conf
+    content: |
+      {% for fs in cis_hardening_disabled_filesystems %}
+      install {{ fs }} /bin/true
+      {% endfor %}
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: CIS 1.1.21 - Find world-writable directories without sticky bit
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+      df --local -P \
+        | awk '{if (NR!=1) print $6}' \
+        | xargs -I '{}' find '{}' -xdev -type d \( -perm -0002 -a ! -perm -1000 \) 2>/dev/null
+    executable: /bin/bash
+  register: cis_hardening_world_writable
+  changed_when: false
+  failed_when: false
+
+- name: CIS 1.1.21 - Set sticky bit on world-writable directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    mode: "a+t"
+  loop: "{{ cis_hardening_world_writable.stdout_lines | default([]) }}"
+  when: cis_hardening_world_writable.stdout_lines | default([]) | length > 0
+
+- name: CIS 1.1.22 - Disable automounting
+  ansible.builtin.service:
+    name: autofs
+    state: stopped
+    enabled: false
+  failed_when: false

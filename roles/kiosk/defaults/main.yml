@@ -1,0 +1,6 @@
+---
+kiosk_portal_url: "http://localhost/"
+kiosk_user: "kiosk"
+kiosk_home: "/var/lib/kiosk"
+kiosk_default_width: 1366
+kiosk_default_height: 768

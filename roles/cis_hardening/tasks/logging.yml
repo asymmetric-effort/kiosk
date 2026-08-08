@@ -1,0 +1,39 @@
+---
+- name: CIS 4.1.1 - Install auditd
+  ansible.builtin.apt:
+    name:
+      - auditd
+      - audispd-plugins
+    state: present
+
+- name: CIS 4.1.1 - Enable auditd
+  ansible.builtin.service:
+    name: auditd
+    state: started
+    enabled: true
+
+- name: CIS 4.1.x - Deploy audit rules
+  ansible.builtin.template:
+    src: audit.rules.j2
+    dest: /etc/audit/rules.d/cis.rules
+    owner: root
+    group: root
+    mode: "0640"
+  notify: Restart auditd
+
+- name: CIS 4.2.x - Ensure journald persistent logging
+  ansible.builtin.file:
+    path: /var/log/journal
+    state: directory
+    owner: root
+    group: systemd-journal
+    mode: "2755"
+
+- name: CIS 4.2.x - Set log directory permissions
+  ansible.builtin.file:
+    path: /var/log
+    state: directory
+    owner: root
+    group: syslog
+    mode: "0750"
+  failed_when: false

@@ -1,0 +1,58 @@
+---
+- name: Install nginx
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+
+- name: Create kiosk webroot
+  ansible.builtin.file:
+    path: "{{ nginx_webroot }}"
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: "0755"
+
+- name: Create data directory for future collector scripts
+  ansible.builtin.file:
+    path: "{{ nginx_webroot }}/data"
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: "0755"
+
+- name: Deploy kiosk dashboard
+  ansible.builtin.template:
+    src: index.html.j2
+    dest: "{{ nginx_webroot }}/index.html"
+    owner: www-data
+    group: www-data
+    mode: "0644"
+  notify: Reload nginx
+
+- name: Remove default nginx site
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: Reload nginx
+
+- name: Deploy kiosk nginx site config
+  ansible.builtin.template:
+    src: kiosk-site.conf.j2
+    dest: /etc/nginx/sites-available/kiosk.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload nginx
+
+- name: Enable kiosk nginx site
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/kiosk.conf
+    dest: /etc/nginx/sites-enabled/kiosk.conf
+    state: link
+  notify: Reload nginx
+
+- name: Enable and start nginx
+  ansible.builtin.service:
+    name: nginx
+    state: started
+    enabled: true

@@ -34,3 +34,9 @@ Thumbs.db
 
 # Coverage
 /coverage/
+
+# Ansible
+.ansible/
+*.retry
+*.vault.yml
+.vault_password

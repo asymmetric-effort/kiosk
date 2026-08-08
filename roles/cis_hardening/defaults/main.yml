@@ -1,0 +1,36 @@
+---
+cis_hardening_ssh_port: 22
+cis_hardening_ssh_allow_users: "deploy"
+cis_hardening_disable_ipv6: false
+cis_hardening_disable_wireless: true
+cis_hardening_password_min_length: 14
+cis_hardening_password_max_days: 365
+cis_hardening_password_min_days: 1
+cis_hardening_password_warn_days: 7
+cis_hardening_faillock_deny: 5
+cis_hardening_faillock_unlock_time: 900
+
+cis_hardening_disabled_services:
+  - avahi-daemon
+  - cups
+  - isc-dhcp-server
+  - slapd
+  - nfs-server
+  - rpcbind
+  - bind9
+  - vsftpd
+  - apache2
+  - dovecot
+  - smbd
+  - squid
+  - snmpd
+  - nis
+
+cis_hardening_disabled_filesystems:
+  - cramfs
+  - freevxfs
+  - jffs2
+  - hfs
+  - hfsplus
+  - squashfs
+  - udf

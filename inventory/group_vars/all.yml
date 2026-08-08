@@ -1,0 +1,17 @@
+---
+# Common
+common_timezone: "UTC"
+common_locale: "en_US.UTF-8"
+
+# CIS Hardening
+cis_hardening_ssh_port: 22
+cis_hardening_ssh_allow_users: "deploy"
+cis_hardening_disable_ipv6: false
+cis_hardening_disable_wireless: true
+
+# Kiosk Display
+kiosk_portal_url: "http://localhost/"
+kiosk_user: "kiosk"
+kiosk_home: "/var/lib/kiosk"
+kiosk_default_width: 1366
+kiosk_default_height: 768

@@ -1,0 +1,117 @@
+---
+- name: Install kiosk packages
+  ansible.builtin.apt:
+    name:
+      - xorg
+      - xinit
+      - x11-xserver-utils
+      - google-chrome-stable
+      - fonts-liberation
+      - unclutter
+    state: present
+
+- name: Create kiosk system user
+  ansible.builtin.user:
+    name: "{{ kiosk_user }}"
+    system: true
+    home: "{{ kiosk_home }}"
+    create_home: true
+    shell: /usr/sbin/nologin
+    groups: video,render,input
+    append: true
+    comment: "Kiosk display user"
+
+- name: Create Chrome data directory
+  ansible.builtin.file:
+    path: "{{ kiosk_home }}/chrome"
+    state: directory
+    owner: "{{ kiosk_user }}"
+    group: "{{ kiosk_user }}"
+    mode: "0750"
+
+- name: Create Chrome cache directory
+  ansible.builtin.file:
+    path: "{{ kiosk_home }}/.cache"
+    state: directory
+    owner: "{{ kiosk_user }}"
+    group: "{{ kiosk_user }}"
+    mode: "0750"
+
+- name: Create Xorg conf.d directory
+  ansible.builtin.file:
+    path: /etc/X11/xorg.conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy Xorg server hardening config
+  ansible.builtin.template:
+    src: xorg-kiosk.conf.j2
+    dest: /etc/X11/xorg.conf.d/10-kiosk.conf
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Configure Xwrapper for console users
+  ansible.builtin.copy:
+    dest: /etc/X11/Xwrapper.config
+    content: |
+      allowed_users=console
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Deploy kiosk session script
+  ansible.builtin.template:
+    src: kiosk-session.sh.j2
+    dest: /usr/local/bin/kiosk-session
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Create Chrome managed policy directory
+  ansible.builtin.file:
+    path: /etc/opt/chrome/policies/managed
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy Chrome kiosk policy
+  ansible.builtin.template:
+    src: chrome-policy.json.j2
+    dest: /etc/opt/chrome/policies/managed/kiosk-policy.json
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Disable all gettys
+  ansible.builtin.systemd:
+    name: "getty@{{ item }}.service"
+    state: stopped
+    enabled: false
+    masked: true
+  loop:
+    - tty1
+    - tty2
+    - tty3
+    - tty4
+    - tty5
+    - tty6
+
+- name: Deploy kiosk systemd service
+  ansible.builtin.template:
+    src: kiosk.service.j2
+    dest: /etc/systemd/system/kiosk.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart kiosk
+
+- name: Enable and start kiosk service
+  ansible.builtin.systemd:
+    name: kiosk.service
+    state: started
+    enabled: true
+    daemon_reload: true

@@ -1,0 +1,27 @@
+---
+- name: CIS 5.2.x - Deploy hardened sshd_config
+  ansible.builtin.template:
+    src: sshd_config.j2
+    dest: /etc/ssh/sshd_config
+    owner: root
+    group: root
+    mode: "0600"
+    validate: "sshd -t -f %s"
+  notify: Restart sshd
+
+- name: CIS 5.2.x - Set SSH config file permissions
+  ansible.builtin.file:
+    path: /etc/ssh/sshd_config
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: CIS 5.2.x - Write login banner
+  ansible.builtin.copy:
+    dest: /etc/issue.net
+    content: |
+      **WARNING** Unauthorized access to this system is prohibited.
+      All activity is monitored and logged.
+    owner: root
+    group: root
+    mode: "0644"
