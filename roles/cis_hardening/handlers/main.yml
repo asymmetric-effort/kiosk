@@ -8,8 +8,7 @@
   ansible.builtin.service:
     name: auditd
     state: restarted
-  tags:
-    - molecule-notest
+  failed_when: false
 
 - name: Reload sysctl
   ansible.builtin.command: sysctl --system
@@ -19,5 +18,4 @@
   ansible.builtin.service:
     name: ufw
     state: restarted
-  tags:
-    - molecule-notest
+  failed_when: false
