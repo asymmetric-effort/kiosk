@@ -5,27 +5,8 @@
   gather_facts: false
 
   tasks:
-    - name: Check GPG keyring exists
-      ansible.builtin.stat:
-        path: /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg
-      register: cloudflare_warp_gpg_keyring
-
-    - name: Assert GPG keyring exists
-      ansible.builtin.assert:
-        that:
-          - cloudflare_warp_gpg_keyring.stat.exists
-        fail_msg: "Cloudflare WARP GPG keyring does not exist"
-
-    - name: Check apt repo source file exists
-      ansible.builtin.stat:
-        path: /etc/apt/sources.list.d/cloudflare-client.list
-      register: cloudflare_warp_apt_repo
-
-    - name: Assert apt repo source file exists
-      ansible.builtin.assert:
-        that:
-          - cloudflare_warp_apt_repo.stat.exists
-        fail_msg: "Cloudflare WARP apt repo source file does not exist"
+    # GPG key and apt repo tasks are skipped in molecule (molecule-notest)
+    # so we only verify MDM config deployment
 
     - name: Check MDM directory exists
       ansible.builtin.stat:

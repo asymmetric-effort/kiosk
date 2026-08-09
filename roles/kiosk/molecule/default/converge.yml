@@ -22,5 +22,13 @@
         name: input
         state: present
 
+    - name: Create X11 directory (normally from xorg package)
+      ansible.builtin.file:
+        path: /etc/X11
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
   roles:
     - role: kiosk

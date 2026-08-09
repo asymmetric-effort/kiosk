@@ -15,6 +15,14 @@
     opts: defaults,nodev,nosuid,noexec
     state: mounted
 
+- name: CIS 1.1.23 - Ensure modprobe.d directory exists
+  ansible.builtin.file:
+    path: /etc/modprobe.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
 - name: CIS 1.1.23 - Disable unused filesystems
   ansible.builtin.copy:
     dest: /etc/modprobe.d/cis-filesystem.conf

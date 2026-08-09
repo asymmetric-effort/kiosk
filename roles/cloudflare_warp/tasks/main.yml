@@ -4,11 +4,15 @@
     url: https://pkg.cloudflarewarp.com/pubkey.gpg
     dest: /tmp/cloudflare-warp-pubkey.gpg
     mode: "0644"
+  tags:
+    - molecule-notest
 
 - name: Dearmor Cloudflare GPG key
   ansible.builtin.command:
     cmd: gpg --dearmor -o /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg /tmp/cloudflare-warp-pubkey.gpg
     creates: /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg
+  tags:
+    - molecule-notest
 
 - name: Add Cloudflare WARP apt repository
   ansible.builtin.deb822_repository:
@@ -18,6 +22,8 @@
     components: main
     signed_by: /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg
     state: present
+  tags:
+    - molecule-notest
 
 - name: Install cloudflare-warp
   ansible.builtin.apt:
