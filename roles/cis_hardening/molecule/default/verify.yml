@@ -1,0 +1,118 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Check sshd_config exists
+      ansible.builtin.stat:
+        path: /etc/ssh/sshd_config
+      register: cis_hardening_sshd_config
+
+    - name: Assert sshd_config exists with correct permissions
+      ansible.builtin.assert:
+        that:
+          - cis_hardening_sshd_config.stat.exists
+          - cis_hardening_sshd_config.stat.mode == '0600'
+        fail_msg: "sshd_config does not exist or has wrong permissions"
+
+    - name: Read sshd_config contents
+      ansible.builtin.slurp:
+        src: /etc/ssh/sshd_config
+      register: cis_hardening_sshd_config_content
+
+    - name: Assert sshd_config contains hardening settings
+      ansible.builtin.assert:
+        that:
+          - "'PermitRootLogin no' in cis_hardening_sshd_config_content.content | b64decode"
+          - "'PasswordAuthentication no' in cis_hardening_sshd_config_content.content | b64decode"
+        fail_msg: "sshd_config missing required hardening settings"
+
+    - name: Check sysctl config exists
+      ansible.builtin.stat:
+        path: /etc/sysctl.d/99-cis-hardening.conf
+      register: cis_hardening_sysctl_config
+
+    - name: Assert sysctl config exists
+      ansible.builtin.assert:
+        that:
+          - cis_hardening_sysctl_config.stat.exists
+        fail_msg: "sysctl hardening config does not exist"
+
+    - name: Read sysctl config contents
+      ansible.builtin.slurp:
+        src: /etc/sysctl.d/99-cis-hardening.conf
+      register: cis_hardening_sysctl_content
+
+    - name: Assert sysctl config contains ASLR setting
+      ansible.builtin.assert:
+        that:
+          - "'kernel.randomize_va_space' in cis_hardening_sysctl_content.content | b64decode"
+        fail_msg: "sysctl config missing ASLR setting"
+
+    - name: Check pwquality.conf exists
+      ansible.builtin.stat:
+        path: /etc/security/pwquality.conf
+      register: cis_hardening_pwquality_config
+
+    - name: Assert pwquality.conf exists
+      ansible.builtin.assert:
+        that:
+          - cis_hardening_pwquality_config.stat.exists
+        fail_msg: "pwquality.conf does not exist"
+
+    - name: Check audit rules exist
+      ansible.builtin.stat:
+        path: /etc/audit/rules.d/cis-hardening.rules
+      register: cis_hardening_audit_rules
+
+    - name: Assert audit rules exist
+      ansible.builtin.assert:
+        that:
+          - cis_hardening_audit_rules.stat.exists
+        fail_msg: "Audit rules file does not exist"
+
+    - name: Check filesystem blacklist exists
+      ansible.builtin.stat:
+        path: /etc/modprobe.d/cis-hardening.conf
+      register: cis_hardening_fs_blacklist
+
+    - name: Assert filesystem blacklist exists
+      ansible.builtin.assert:
+        that:
+          - cis_hardening_fs_blacklist.stat.exists
+        fail_msg: "Filesystem blacklist does not exist"
+
+    - name: Check login banner exists
+      ansible.builtin.stat:
+        path: /etc/issue.net
+      register: cis_hardening_login_banner
+
+    - name: Assert login banner exists
+      ansible.builtin.assert:
+        that:
+          - cis_hardening_login_banner.stat.exists
+        fail_msg: "Login banner does not exist"
+
+    - name: Check faillock config exists
+      ansible.builtin.stat:
+        path: /etc/security/faillock.conf
+      register: cis_hardening_faillock_config
+
+    - name: Assert faillock config exists
+      ansible.builtin.assert:
+        that:
+          - cis_hardening_faillock_config.stat.exists
+        fail_msg: "faillock config does not exist"
+
+    - name: Check limits config exists
+      ansible.builtin.stat:
+        path: /etc/security/limits.d/cis-hardening.conf
+      register: cis_hardening_limits_config
+
+    - name: Assert limits config exists
+      ansible.builtin.assert:
+        that:
+          - cis_hardening_limits_config.stat.exists
+        fail_msg: "limits config does not exist"

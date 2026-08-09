@@ -3,16 +3,22 @@
   ansible.builtin.apt:
     name: ufw
     state: present
+  tags:
+    - molecule-notest
 
 - name: CIS 3.5.2 - Set UFW default deny incoming
   community.general.ufw:
     direction: incoming
     default: deny
+  tags:
+    - molecule-notest
 
 - name: CIS 3.5.2 - Set UFW default deny outgoing
   community.general.ufw:
     direction: outgoing
     default: deny
+  tags:
+    - molecule-notest
 
 - name: CIS 3.5.3 - Allow SSH access (key-based non-root)
   community.general.ufw:
@@ -20,6 +26,8 @@
     port: "{{ cis_hardening_ssh_port | string }}"
     proto: tcp
     comment: "SSH access - always permitted"
+  tags:
+    - molecule-notest
 
 - name: Allow outbound DNS for WARP resolution
   community.general.ufw:
@@ -28,6 +36,8 @@
     port: "53"
     proto: udp
     comment: "DNS resolution"
+  tags:
+    - molecule-notest
 
 - name: Allow outbound HTTPS for WARP registration and updates
   community.general.ufw:
@@ -36,6 +46,8 @@
     port: "443"
     proto: tcp
     comment: "HTTPS for WARP and apt"
+  tags:
+    - molecule-notest
 
 - name: Allow WARP UDP tunnel port outbound
   community.general.ufw:
@@ -44,6 +56,8 @@
     port: "2408"
     proto: udp
     comment: "Cloudflare WARP tunnel"
+  tags:
+    - molecule-notest
 
 - name: Allow outbound NTP for chrony
   community.general.ufw:
@@ -52,7 +66,11 @@
     port: "123"
     proto: udp
     comment: "NTP time sync"
+  tags:
+    - molecule-notest
 
 - name: CIS 3.5.4 - Enable UFW
   community.general.ufw:
     state: enabled
+  tags:
+    - molecule-notest

@@ -1,0 +1,26 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+
+  vars:
+    molecule_test: true
+
+  pre_tasks:
+    - name: Create video group
+      ansible.builtin.group:
+        name: video
+        state: present
+
+    - name: Create render group
+      ansible.builtin.group:
+        name: render
+        state: present
+
+    - name: Create input group
+      ansible.builtin.group:
+        name: input
+        state: present
+
+  roles:
+    - role: kiosk

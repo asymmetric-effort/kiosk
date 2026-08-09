@@ -40,3 +40,5 @@ Thumbs.db
 *.retry
 *.vault.yml
 .vault_password
+# Added by code-review-graph
+.code-review-graph/

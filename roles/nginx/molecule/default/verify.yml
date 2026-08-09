@@ -1,0 +1,96 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Assert nginx service is running
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services['nginx.service'].state == 'running'
+        fail_msg: "nginx service is not running"
+
+    - name: Check webroot exists
+      ansible.builtin.stat:
+        path: /var/www/kiosk
+      register: nginx_webroot
+
+    - name: Assert webroot exists
+      ansible.builtin.assert:
+        that:
+          - nginx_webroot.stat.exists
+          - nginx_webroot.stat.isdir
+        fail_msg: "Webroot directory does not exist"
+
+    - name: Check index.html exists
+      ansible.builtin.stat:
+        path: /var/www/kiosk/index.html
+      register: nginx_index_html
+
+    - name: Assert index.html exists
+      ansible.builtin.assert:
+        that:
+          - nginx_index_html.stat.exists
+        fail_msg: "index.html does not exist"
+
+    - name: Check site config exists
+      ansible.builtin.stat:
+        path: /etc/nginx/sites-available/kiosk.conf
+      register: nginx_site_config
+
+    - name: Assert site config exists
+      ansible.builtin.assert:
+        that:
+          - nginx_site_config.stat.exists
+        fail_msg: "Nginx site config does not exist"
+
+    - name: Check site enabled symlink exists
+      ansible.builtin.stat:
+        path: /etc/nginx/sites-enabled/kiosk.conf
+      register: nginx_site_enabled
+
+    - name: Assert site enabled symlink exists
+      ansible.builtin.assert:
+        that:
+          - nginx_site_enabled.stat.exists
+          - nginx_site_enabled.stat.islnk
+        fail_msg: "Site enabled symlink does not exist"
+
+    - name: Check default site is removed
+      ansible.builtin.stat:
+        path: /etc/nginx/sites-enabled/default
+      register: nginx_default_site
+
+    - name: Assert default site is removed
+      ansible.builtin.assert:
+        that:
+          - not nginx_default_site.stat.exists
+        fail_msg: "Default site should be removed"
+
+    - name: Curl localhost to verify response
+      ansible.builtin.uri:
+        url: http://127.0.0.1/
+        return_content: true
+      register: nginx_curl_result
+
+    - name: Assert curl returns NOC Display
+      ansible.builtin.assert:
+        that:
+          - "'NOC Display' in nginx_curl_result.content"
+        fail_msg: "Curl response does not contain 'NOC Display'"
+
+    - name: Check data directory exists
+      ansible.builtin.stat:
+        path: /var/www/kiosk/data
+      register: nginx_data_dir
+
+    - name: Assert data directory exists
+      ansible.builtin.assert:
+        that:
+          - nginx_data_dir.stat.exists
+          - nginx_data_dir.stat.isdir
+        fail_msg: "Data directory does not exist"

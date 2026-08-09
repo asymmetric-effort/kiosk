@@ -4,3 +4,5 @@
     name: kiosk.service
     state: restarted
     daemon_reload: true
+  tags:
+    - molecule-notest

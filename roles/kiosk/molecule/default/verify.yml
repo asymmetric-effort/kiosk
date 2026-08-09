@@ -1,0 +1,164 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Check kiosk user exists
+      ansible.builtin.command: id kiosk
+      register: kiosk_user
+      changed_when: false
+      failed_when: kiosk_user.rc != 0
+
+    - name: Get kiosk user info
+      ansible.builtin.getent:
+        database: passwd
+        key: kiosk
+
+    - name: Assert kiosk user has nologin shell and UID less than 1000
+      ansible.builtin.assert:
+        that:
+          - "'/usr/sbin/nologin' in getent_passwd['kiosk'][5]"
+          - "getent_passwd['kiosk'][1] | int < 1000"
+        fail_msg: "Kiosk user does not have nologin shell or UID >= 1000"
+
+    - name: Check /var/lib/kiosk exists
+      ansible.builtin.stat:
+        path: /var/lib/kiosk
+      register: kiosk_dir
+
+    - name: Assert /var/lib/kiosk exists
+      ansible.builtin.assert:
+        that:
+          - kiosk_dir.stat.exists
+          - kiosk_dir.stat.isdir
+        fail_msg: "/var/lib/kiosk does not exist"
+
+    - name: Check chrome data directory exists and is owned by kiosk
+      ansible.builtin.stat:
+        path: /var/lib/kiosk/.config/google-chrome
+      register: kiosk_chrome_data
+
+    - name: Assert chrome data dir exists and owned by kiosk
+      ansible.builtin.assert:
+        that:
+          - kiosk_chrome_data.stat.exists
+          - kiosk_chrome_data.stat.isdir
+          - kiosk_chrome_data.stat.pw_name == 'kiosk'
+        fail_msg: "Chrome data directory does not exist or is not owned by kiosk"
+
+    - name: Check Xorg conf.d exists
+      ansible.builtin.stat:
+        path: /etc/X11/xorg.conf.d
+      register: kiosk_xorg_confd
+
+    - name: Assert Xorg conf.d exists
+      ansible.builtin.assert:
+        that:
+          - kiosk_xorg_confd.stat.exists
+          - kiosk_xorg_confd.stat.isdir
+        fail_msg: "Xorg conf.d directory does not exist"
+
+    - name: Check 10-kiosk.conf exists
+      ansible.builtin.stat:
+        path: /etc/X11/xorg.conf.d/10-kiosk.conf
+      register: kiosk_xorg_conf
+
+    - name: Assert 10-kiosk.conf exists
+      ansible.builtin.assert:
+        that:
+          - kiosk_xorg_conf.stat.exists
+        fail_msg: "10-kiosk.conf does not exist"
+
+    - name: Read 10-kiosk.conf contents
+      ansible.builtin.slurp:
+        src: /etc/X11/xorg.conf.d/10-kiosk.conf
+      register: kiosk_xorg_content
+
+    - name: Assert 10-kiosk.conf contains DontVTSwitch
+      ansible.builtin.assert:
+        that:
+          - "'DontVTSwitch' in kiosk_xorg_content.content | b64decode"
+        fail_msg: "10-kiosk.conf does not contain DontVTSwitch"
+
+    - name: Check Xwrapper.config exists
+      ansible.builtin.stat:
+        path: /etc/X11/Xwrapper.config
+      register: kiosk_xwrapper_config
+
+    - name: Assert Xwrapper.config exists
+      ansible.builtin.assert:
+        that:
+          - kiosk_xwrapper_config.stat.exists
+        fail_msg: "Xwrapper.config does not exist"
+
+    - name: Check kiosk-session script exists and is executable
+      ansible.builtin.stat:
+        path: /usr/local/bin/kiosk-session
+      register: kiosk_session
+
+    - name: Assert kiosk-session is executable
+      ansible.builtin.assert:
+        that:
+          - kiosk_session.stat.exists
+          - kiosk_session.stat.executable
+        fail_msg: "kiosk-session script does not exist or is not executable"
+
+    - name: Check Chrome policy directory exists
+      ansible.builtin.stat:
+        path: /etc/opt/chrome/policies/managed
+      register: kiosk_chrome_policy_dir
+
+    - name: Assert Chrome policy directory exists
+      ansible.builtin.assert:
+        that:
+          - kiosk_chrome_policy_dir.stat.exists
+          - kiosk_chrome_policy_dir.stat.isdir
+        fail_msg: "Chrome policy directory does not exist"
+
+    - name: Check kiosk-policy.json exists
+      ansible.builtin.stat:
+        path: /etc/opt/chrome/policies/managed/kiosk-policy.json
+      register: kiosk_policy
+
+    - name: Assert kiosk-policy.json exists
+      ansible.builtin.assert:
+        that:
+          - kiosk_policy.stat.exists
+        fail_msg: "kiosk-policy.json does not exist"
+
+    - name: Read kiosk-policy.json contents
+      ansible.builtin.slurp:
+        src: /etc/opt/chrome/policies/managed/kiosk-policy.json
+      register: kiosk_policy_content
+
+    - name: Assert kiosk-policy.json contains URLBlocklist
+      ansible.builtin.assert:
+        that:
+          - "'URLBlocklist' in kiosk_policy_content.content | b64decode"
+        fail_msg: "kiosk-policy.json does not contain URLBlocklist"
+
+    - name: Check kiosk.service unit file exists
+      ansible.builtin.stat:
+        path: /etc/systemd/system/kiosk.service
+      register: kiosk_service
+
+    - name: Assert kiosk.service exists
+      ansible.builtin.assert:
+        that:
+          - kiosk_service.stat.exists
+        fail_msg: "kiosk.service unit file does not exist"
+
+    - name: Read kiosk.service contents
+      ansible.builtin.slurp:
+        src: /etc/systemd/system/kiosk.service
+      register: kiosk_service_content
+
+    - name: Assert kiosk.service contains required settings
+      ansible.builtin.assert:
+        that:
+          - "'User=kiosk' in kiosk_service_content.content | b64decode"
+          - "'Restart=always' in kiosk_service_content.content | b64decode"
+          - "'NoNewPrivileges=yes' in kiosk_service_content.content | b64decode"
+        fail_msg: "kiosk.service missing required settings"

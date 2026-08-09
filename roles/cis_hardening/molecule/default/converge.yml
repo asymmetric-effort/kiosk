@@ -1,0 +1,17 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+
+  vars:
+    kiosk_user: kiosk
+
+  pre_tasks:
+    - name: Install openssh-server
+      ansible.builtin.apt:
+        name: openssh-server
+        state: present
+        update_cache: true
+
+  roles:
+    - role: cis_hardening

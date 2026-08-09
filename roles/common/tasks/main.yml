@@ -8,6 +8,8 @@
   ansible.builtin.apt:
     upgrade: dist
     autoremove: true
+  tags:
+    - molecule-notest
 
 - name: Install base packages
   ansible.builtin.apt:

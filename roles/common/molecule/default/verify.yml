@@ -1,0 +1,53 @@
+---
+- name: Verify
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Check base packages are installed
+      ansible.builtin.command: dpkg -l {{ item }}
+      register: common_dpkg_result
+      changed_when: false
+      failed_when: common_dpkg_result.rc != 0
+      loop:
+        - curl
+        - wget
+        - git
+        - vim
+        - htop
+        - jq
+        - unattended-upgrades
+
+    - name: Check Chrome apt repo exists
+      ansible.builtin.stat:
+        path: /etc/apt/sources.list.d/google-chrome.list
+      register: common_chrome_repo
+
+    - name: Assert Chrome apt repo exists
+      ansible.builtin.assert:
+        that:
+          - common_chrome_repo.stat.exists
+        fail_msg: "Chrome apt repo source file does not exist"
+
+    - name: Check Chrome signing key exists
+      ansible.builtin.stat:
+        path: /usr/share/keyrings/google-chrome-keyring.gpg
+      register: common_chrome_key
+
+    - name: Assert Chrome signing key exists
+      ansible.builtin.assert:
+        that:
+          - common_chrome_key.stat.exists
+        fail_msg: "Chrome signing key does not exist"
+
+    - name: Check unattended-upgrades config deployed
+      ansible.builtin.stat:
+        path: /etc/apt/apt.conf.d/50unattended-upgrades
+      register: common_unattended_config
+
+    - name: Assert unattended-upgrades config exists
+      ansible.builtin.assert:
+        that:
+          - common_unattended_config.stat.exists
+        fail_msg: "Unattended-upgrades config not deployed"

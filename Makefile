@@ -1,4 +1,4 @@
-.PHONY: lint test deploy
+.PHONY: lint test unit-test molecule test-all deploy
 
 lint:
 	yamllint .
@@ -7,6 +7,17 @@ lint:
 test: lint
 	ansible-playbook site.yml --syntax-check
 	ansible-playbook tests/verify.yml --syntax-check
+
+unit-test:
+	pytest tests/unit/ -v
+
+molecule:
+	@for role in common cis_hardening cloudflare_warp nginx kiosk; do \
+		echo "=== Molecule: $$role ===" && \
+		cd roles/$$role && molecule test && cd ../.. || exit 1; \
+	done
+
+test-all: test unit-test molecule
 
 # PORTAL_URL defaults to http://localhost/ (the built-in NOC dashboard).
 # ZTNA params: set via env vars (WARP_ORG, WARP_GATEWAY_ID)

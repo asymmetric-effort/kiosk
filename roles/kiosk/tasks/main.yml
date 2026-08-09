@@ -9,6 +9,8 @@
       - fonts-liberation
       - unclutter
     state: present
+  tags:
+    - molecule-notest
 
 - name: Create kiosk system user
   ansible.builtin.user:
@@ -99,6 +101,8 @@
     - tty4
     - tty5
     - tty6
+  tags:
+    - molecule-notest
 
 - name: Deploy kiosk systemd service
   ansible.builtin.template:
@@ -115,3 +119,5 @@
     state: started
     enabled: true
     daemon_reload: true
+  tags:
+    - molecule-notest

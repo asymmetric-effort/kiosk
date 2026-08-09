@@ -24,6 +24,8 @@
     name: cloudflare-warp
     state: present
     update_cache: true
+  tags:
+    - molecule-notest
 
 - name: Create WARP MDM configuration directory
   ansible.builtin.file:
@@ -47,12 +49,16 @@
     name: warp-svc
     state: started
     enabled: true
+  tags:
+    - molecule-notest
 
 - name: Check WARP registration status
   ansible.builtin.command: warp-cli registration show
   register: cloudflare_warp_reg_status
   changed_when: false
   failed_when: false
+  tags:
+    - molecule-notest
 
 - name: Register WARP client
   ansible.builtin.command: warp-cli registration new
@@ -60,18 +66,26 @@
     cloudflare_warp_reg_status.rc != 0 or
     'Missing registration' in (cloudflare_warp_reg_status.stderr | default(''))
   changed_when: true
+  tags:
+    - molecule-notest
 
 - name: Set WARP mode
   ansible.builtin.command: "warp-cli mode {{ cloudflare_warp_mode }}"
   changed_when: false
+  tags:
+    - molecule-notest
 
 - name: Check WARP connection status
   ansible.builtin.command: warp-cli status
   register: cloudflare_warp_conn_status
   changed_when: false
   failed_when: false
+  tags:
+    - molecule-notest
 
 - name: Connect WARP
   ansible.builtin.command: warp-cli connect
   when: "'Connected' not in (cloudflare_warp_conn_status.stdout | default(''))"
   changed_when: true
+  tags:
+    - molecule-notest

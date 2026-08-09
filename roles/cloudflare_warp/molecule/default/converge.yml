@@ -1,0 +1,13 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+
+  vars:
+    cloudflare_warp_organization: test-org
+    cloudflare_warp_auth_client_id: test-client-id
+    cloudflare_warp_auth_client_secret: test-client-secret
+    cloudflare_warp_unique_client_id: test-unique-client-id
+
+  roles:
+    - role: cloudflare_warp
