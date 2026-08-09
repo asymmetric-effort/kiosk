@@ -3,3 +3,5 @@
   ansible.builtin.service:
     name: warp-svc
     state: restarted
+  tags:
+    - molecule-notest

@@ -37,7 +37,7 @@
 
     - name: Check chrome data directory exists and is owned by kiosk
       ansible.builtin.stat:
-        path: /var/lib/kiosk/.config/google-chrome
+        path: /var/lib/kiosk/chrome
       register: kiosk_chrome_data
 
     - name: Assert chrome data dir exists and owned by kiosk
