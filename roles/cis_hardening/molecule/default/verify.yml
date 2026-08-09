@@ -75,7 +75,7 @@
 
     - name: Check filesystem blacklist exists
       ansible.builtin.stat:
-        path: /etc/modprobe.d/cis-hardening.conf
+        path: /etc/modprobe.d/cis-filesystem.conf
       register: cis_hardening_fs_blacklist
 
     - name: Assert filesystem blacklist exists
@@ -108,7 +108,7 @@
 
     - name: Check limits config exists
       ansible.builtin.stat:
-        path: /etc/security/limits.d/cis-hardening.conf
+        path: /etc/security/limits.d/cis-limits.conf
       register: cis_hardening_limits_config
 
     - name: Assert limits config exists
