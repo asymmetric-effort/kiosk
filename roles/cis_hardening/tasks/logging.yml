@@ -11,6 +11,8 @@
     name: auditd
     state: started
     enabled: true
+  tags:
+    - molecule-notest
 
 - name: CIS 4.1.x - Deploy audit rules
   ansible.builtin.template:

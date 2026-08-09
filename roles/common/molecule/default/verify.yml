@@ -12,16 +12,15 @@
       failed_when: common_dpkg_result.rc != 0
       loop:
         - curl
-        - wget
-        - git
-        - vim
-        - htop
-        - jq
+        - gnupg
+        - ca-certificates
+        - lsb-release
         - unattended-upgrades
+        - software-properties-common
 
     - name: Check Chrome apt repo exists
       ansible.builtin.stat:
-        path: /etc/apt/sources.list.d/google-chrome.list
+        path: /etc/apt/sources.list.d/google-chrome.sources
       register: common_chrome_repo
 
     - name: Assert Chrome apt repo exists
@@ -32,7 +31,7 @@
 
     - name: Check Chrome signing key exists
       ansible.builtin.stat:
-        path: /usr/share/keyrings/google-chrome-keyring.gpg
+        path: /usr/share/keyrings/google-chrome.gpg
       register: common_chrome_key
 
     - name: Assert Chrome signing key exists
@@ -43,7 +42,7 @@
 
     - name: Check unattended-upgrades config deployed
       ansible.builtin.stat:
-        path: /etc/apt/apt.conf.d/50unattended-upgrades
+        path: /etc/apt/apt.conf.d/50unattended-upgrades-kiosk
       register: common_unattended_config
 
     - name: Assert unattended-upgrades config exists
