@@ -64,7 +64,7 @@
 
     - name: Check audit rules exist
       ansible.builtin.stat:
-        path: /etc/audit/rules.d/cis-hardening.rules
+        path: /etc/audit/rules.d/cis.rules
       register: cis_hardening_audit_rules
 
     - name: Assert audit rules exist
